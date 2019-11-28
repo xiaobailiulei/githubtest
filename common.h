@@ -71,6 +71,8 @@ typedef struct {
 	int  msgtype;     //请求的消息类型
 	int  usertype;    //ADMIN 1	USER 2	   
 	char username[NAMELEN];  //姓名
+	char cunchu[NAMELEN];  //存储用户编号
+	char amend[NAMELEN];   //用户要修改的项目
 	char passwd[8];			 //登陆密码
 	char recvmsg[DATALEN];   //通信的消息
 	int  flags;      //标志位

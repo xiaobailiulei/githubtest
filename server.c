@@ -34,7 +34,18 @@ int process_user_or_admin_login_request(int acceptfd,MSG *msg)
 	char *errmsg;
 	char **result;
 	int nrow,ncolumn;
-
+	char tim[DATALEN]={0};
+	time_t now ;
+    struct tm *tm_now;
+    time(&now);
+    tm_now = localtime(&now) ;
+	sprintf(tim,"%d-%d-%d %d:%d:%d",tm_now->tm_year+1900, tm_now->tm_mon+1, tm_now->tm_mday, tm_now->tm_hour, tm_now->tm_min, tm_now->tm_sec);
+	sprintf(sql,"insert into historyinfo values('%s','%s','登陆');",tim,msg->username);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+			printf("---****----%s.\n",errmsg);		
+			}
+	
+	memset(sql,0,sizeof(sql));
 	msg->info.usertype =  msg->usertype;
 	strcpy(msg->info.name,msg->username);
 	strcpy(msg->info.passwd,msg->passwd);
@@ -59,7 +70,26 @@ int process_user_or_admin_login_request(int acceptfd,MSG *msg)
 int process_user_modify_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
-
+	char variable[DATALEN] = {0};
+	char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	int nrow,ncolumn,i,j;
+	char tim[DATALEN]={0};
+	time_t now ;
+    struct tm *tm_now;
+    time(&now);
+    tm_now = localtime(&now) ;
+	sprintf(tim,"%d-%d-%d %d:%d:%d",tm_now->tm_year+1900, tm_now->tm_mon+1, tm_now->tm_mday, tm_now->tm_hour, tm_now->tm_min, tm_now->tm_sec);
+	sprintf(sql,"insert into historyinfo values('%s','%s','修改信息');",tim,msg->cunchu);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+			printf("---****----%s.\n",errmsg);		
+			}
+	sprintf(sql,"update usrinfo set '%s'='%s' where name = '%s';",msg->amend,msg->recvmsg,msg->cunchu);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg)!=SQLITE_OK){
+		printf("错误%s\n",errmsg);
+		
+	}else{}
 }
 
 
@@ -67,13 +97,74 @@ int process_user_modify_request(int acceptfd,MSG *msg)
 int process_user_query_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
+	char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	int nrow,ncolumn,i,j;
+	char tim[DATALEN]={0};
+	time_t now ;
+    struct tm *tm_now;
+    time(&now);
+    tm_now = localtime(&now) ;
+	sprintf(tim,"%d-%d-%d %d:%d:%d",tm_now->tm_year+1900, tm_now->tm_mon+1, tm_now->tm_mday, tm_now->tm_hour, tm_now->tm_min, tm_now->tm_sec);
+	sprintf(sql,"insert into historyinfo values('%s','%s','查看');",tim,msg->cunchu);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+			printf("---****----%s.\n",errmsg);		
+			}
+	sprintf(sql,"select * from usrinfo where name = '%s';",msg->cunchu);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg)!=SQLITE_OK){
+		printf("错误%s\n",errmsg);
+		
+	}else{
+		memset(sql,0,sizeof(sql));
+		if(nrow == 0){
+			strcpy(msg->recvmsg,"数据库无信息\n");
+			send(acceptfd,msg,sizeof(MSG),0);
+		}else{
+			printf("%d,%d",nrow,ncolumn);
+			for(i = 0;i<=nrow;i++){
+				for(j=0;j<ncolumn;j++)
+				{
+					sprintf(sql,"%s %s",sql,*result);
+					*result++;				
+				}
+				printf("%-6s",sql);
+				send(acceptfd,sql,sizeof(sql),0);
+				printf("------------%s-----------%d.\n",__func__,__LINE__);
+				recv(acceptfd,msg,sizeof(MSG),0);
+				memset(sql,0,sizeof(sql));
+			}
 
+			}
 }
-
+}
 
 int process_admin_modify_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
+	char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	int nrow,ncolumn,i,j;
+	char tim[DATALEN]={0};
+	time_t now ;
+    struct tm *tm_now;
+    time(&now);
+    tm_now = localtime(&now) ;
+	sprintf(tim,"%d-%d-%d %d:%d:%d",tm_now->tm_year+1900, tm_now->tm_mon+1, tm_now->tm_mday, tm_now->tm_hour, tm_now->tm_min, tm_now->tm_sec);
+	sprintf(sql,"insert into historyinfo values('%s','%s','修改信息');",tim,msg->cunchu);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+			printf("---****----%s.\n",errmsg);		
+			}
+	memset(sql,0,sizeof(sql));
+	printf("%s",msg->info.name);
+	sprintf(sql,"update usrinfo set name='%s',passwd='%s',age=%d,phone='%s',addr='%s',work='%s',date='%s',level=%d,salary=%lf where staffno = %d;",msg->info.name,msg->info.passwd,msg->info.age,msg->info.phone,msg->info.addr,msg->info.work,msg->info.date,msg->info.level,msg->info.salary,msg->info.no);
+	if(sqlite3_exec(db,sql,NULL,NULL,&errmsg)!=SQLITE_OK)
+	{
+				printf("修改失败%s\n",errmsg);
+				return -1;
+	}
+	
 
 }
 
@@ -81,6 +172,35 @@ int process_admin_modify_request(int acceptfd,MSG *msg)
 int process_admin_adduser_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
+	char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	char tim[DATALEN]={0};
+	int nrow,ncolumn,i,j;
+	time_t now ;
+    struct tm *tm_now;
+    time(&now);
+    tm_now = localtime(&now) ;
+	sprintf(tim,"%d-%d-%d %d:%d:%d",tm_now->tm_year+1900, tm_now->tm_mon+1, tm_now->tm_mday, tm_now->tm_hour, tm_now->tm_min, tm_now->tm_sec);
+	sprintf(sql,"insert into historyinfo values('%s','%s','添加成员');",tim,msg->cunchu);
+	printf("%s\n",msg->cunchu);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+			printf("---****----%s.\n",errmsg);		
+			}
+	memset(sql,0,sizeof(sql));		
+	sprintf(sql,"insert into usrinfo values(%d,%d,'%s','%s',%d,'%s','%s','%s','%s',%d,%lf);",msg->info.no,msg->info.usertype,msg->info.name,msg->info.passwd,msg->info.age,msg->info.phone,msg->info.addr,msg->info.work,msg->info.date,msg->info.level,msg->info.salary);
+	printf("%s\n",sql);
+	printf("%s\n",msg->info.date);
+	if(sqlite3_exec(db,sql,NULL,NULL,&errmsg)!=SQLITE_OK)
+	{
+				printf("%s\n",errmsg);
+				return -1;
+			}
+	else
+	{
+			strcpy(msg->recvmsg,"OK");
+			send(acceptfd,msg,sizeof(MSG),0);
+	}
 
 }
 
@@ -88,7 +208,34 @@ int process_admin_adduser_request(int acceptfd,MSG *msg)
 
 int process_admin_deluser_request(int acceptfd,MSG *msg)
 {
+	char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	int nrow,ncolumn;
+	char tim[DATALEN]={0};
+	time_t now ;
+    struct tm *tm_now;
+    time(&now);
+    tm_now = localtime(&now) ;
+	sprintf(tim,"%d-%d-%d %d:%d:%d",tm_now->tm_year+1900, tm_now->tm_mon+1, tm_now->tm_mday, tm_now->tm_hour, tm_now->tm_min, tm_now->tm_sec);
+	sprintf(sql,"insert into historyinfo values('%s','%s','删除成员');",tim,msg->cunchu);
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
+	printf("%s\n",msg->cunchu);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+			printf("---****----%s.\n",errmsg);		
+			}
+	memset(sql,0,sizeof(sql));
+	sprintf(sql,"select * from usrinfo where staffno = %d",msg->info.no);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+		printf("无此员工%s.\n",errmsg);
+		
+	}else{
+			memset(sql,0,sizeof(sql));
+			sprintf(sql,"delete from usrinfo where staffno = %d",msg->info.no);
+			if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg)!=SQLITE_OK){
+				printf("删除失败%s.\n",errmsg);
+			}
+	}
 
 }
 
@@ -96,12 +243,89 @@ int process_admin_deluser_request(int acceptfd,MSG *msg)
 int process_admin_query_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
+	char sql[1000] = {0};
+	char *errmsg;
+	char **result;
+	int nrow,ncolumn,i,j;
+	char tim[DATALEN]={0};
+	time_t now ;
+    struct tm *tm_now;
+    time(&now);
+    tm_now = localtime(&now) ;
+	sprintf(tim,"%d-%d-%d %d:%d:%d",tm_now->tm_year+1900, tm_now->tm_mon+1, tm_now->tm_mday, tm_now->tm_hour, tm_now->tm_min, tm_now->tm_sec);
+	sprintf(sql,"insert into historyinfo values('%s','%s','查询信息');",tim,msg->cunchu);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+			printf("---****----%s.\n",errmsg);		
+			}	
+	memset(sql,0,sizeof(sql));		
+	if(sqlite3_get_table(db,"select * from usrinfo",&result,&nrow,&ncolumn,&errmsg)!=SQLITE_OK){
+		printf("查询错误%s\n",errmsg);
+		
+	}else{
+		if(nrow == 0){
+			strcpy(msg->recvmsg,"数据库无信息\n");
+			send(acceptfd,msg,sizeof(MSG),0);
+		}else{
+			
+			for(i = 0;i<=nrow;i++){
+				for(j=0;j<ncolumn;j++)
+				{
+					sprintf(sql,"%s %s",sql,*result);
+					*result++;
+		
+					//printf("%-5s",*result++);
+					
+				}
+				printf("%-6s",sql);
+				send(acceptfd,sql,sizeof(sql),0);
+				memset(sql,0,sizeof(sql));
+				printf("\n");
+			}
+				memset(sql,0,sizeof(sql));
+				sprintf(sql,"%s","123");
+				send(acceptfd,sql,sizeof(sql),0);
+		}
+	}
+	
 
 }
 
 int process_admin_history_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
+	char sql[1000] = {0};
+	char *errmsg;
+	char **result;
+	int nrow,ncolumn,i,j;
+	if(sqlite3_get_table(db,"select * from historyinfo;",&result,&nrow,&ncolumn,&errmsg)!=SQLITE_OK){
+		printf("查询错误%s\n",errmsg);
+		
+	}else{
+		if(nrow == 0){
+			sprintf(sql,"数据库无信息");
+			send(acceptfd,sql,sizeof(sql),0);
+			memset(sql,0,sizeof(sql));
+			recv(acceptfd,msg,sizeof(MSG),0);
+			sprintf(sql,"%s","123");
+			send(acceptfd,sql,sizeof(sql),0);
+		}else{
+			
+			for(i = 0;i<=nrow;i++){
+				for(j=0;j<ncolumn;j++)
+				{
+					sprintf(sql,"%s %s",sql,*result);
+					*result++;	
+				}
+				send(acceptfd,sql,sizeof(sql),0);
+				recv(acceptfd,msg,sizeof(MSG),0);
+				memset(sql,0,sizeof(sql));
+				printf("\n");
+			}
+				memset(sql,0,sizeof(sql));
+				sprintf(sql,"%s","123");
+				send(acceptfd,sql,sizeof(sql),0);
+		}
+	}
 
 }
 
@@ -109,6 +333,8 @@ int process_admin_history_request(int acceptfd,MSG *msg)
 int process_client_quit_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
+	strcpy(msg->recvmsg,"退出");
+	send(acceptfd,msg,sizeof(MSG),0);
 
 }
 
@@ -165,11 +391,10 @@ int main(int argc, const char *argv[])
 	struct sockaddr_in clientaddr;
 	socklen_t addrlen = sizeof(serveraddr);
 	socklen_t cli_len = sizeof(clientaddr);
-
 	MSG msg;
 	//thread_data_t tid_data;
 	char *errmsg;
-
+	
 	if(sqlite3_open(STAFF_DATABASE,&db) != SQLITE_OK){
 		printf("%s.\n",sqlite3_errmsg(db));
 	}else{
@@ -208,7 +433,7 @@ int main(int argc, const char *argv[])
 //	serveraddr.sin_port   = htons(atoi(argv[2]));
 //	serveraddr.sin_addr.s_addr = inet_addr(argv[1]);
 	serveraddr.sin_port   = htons(5001);
-	serveraddr.sin_addr.s_addr = inet_addr("192.168.1.160");
+	serveraddr.sin_addr.s_addr = inet_addr("192.168.1.161");
 
 
 	//绑定网络套接字和网络结构体
